@@ -1,0 +1,43 @@
+import cv2
+import numpy as np
+
+# Load the image
+image = cv2.imread('shapes.png')  # replace with your shape image
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+_, thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)
+
+# Find contours
+contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+for contour in contours:
+    # Approximate the contour to reduce number of points
+    approx = cv2.approxPolyDP(contour, 0.04 * cv2.arcLength(contour, True), True)
+    M = cv2.moments(contour)
+
+    if M["m00"] != 0:
+        cX = int(M["m10"] / M["m00"])
+        cY = int(M["m01"] / M["m00"])
+    else:
+        continue
+
+    # Identify the shape based on number of sides
+    shape = ""
+    if len(approx) == 3:
+        shape = "Triangle"
+    elif len(approx) == 4:
+        # Compute aspect ratio to distinguish square vs rectangle
+        (x, y, w, h) = cv2.boundingRect(approx)
+        ar = w / float(h)
+        shape = "Square" if 0.95 <= ar <= 1.05 else "Rectangle"
+    elif len(approx) > 4:
+        shape = "Circle"
+    
+    # Draw contour and shape name
+    cv2.drawContours(image, [approx], -1, (0, 255, 0), 2)
+    cv2.putText(image, shape, (cX - 40, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+
+# Show the result
+cv2.imshow("Detected Shapes", image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
